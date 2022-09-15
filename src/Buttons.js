@@ -4,15 +4,15 @@ const {python} = require('pythonia');
 exports.runButtonsRaw = function(callback){
    async function go() {    
     const tk = await python('tkinter')
-    // All Python API access must be prefixed with await
     const root = await tk.Tk()
     await root.geometry('600x500')
-    // A function call with a $ suffix will treat the last argument as a kwarg dict
-    const makeCallback = function(i){
-        return callback(i)
+    const makeCallback = function(i, isDown){
+        return callback(i)(isDown)
     }
     for(i = 1; i <=4; i++){
-       const btn = await tk.Button$(root, {text: "" + i, command: makeCallback(i)} );
+       const btn = await tk.Button$(root, {text: "" + i});
+       await btn.bind('<ButtonPress>', makeCallback(i, true))
+       await btn.bind('<ButtonRelease>', makeCallback(i, false))
        await btn.grid({column: i, row: 0});
     }
 
