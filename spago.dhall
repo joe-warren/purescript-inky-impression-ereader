@@ -20,6 +20,7 @@ to generate this file without the comments in this block.
      "pipes",
      "avar",
      "datetime",
+     "now",
      "foldable-traversable",
      "maybe",
      "parallel",
