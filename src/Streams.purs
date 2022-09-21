@@ -32,12 +32,6 @@ import Data.Foldable (foldMap)
 import Data.Semigroup (append)
 newtype Stream m i o a = Stream (ReaderT (Tuple (m i) (o -> m Unit)) m a)
 
-
-newtype ParStream m i o a = ParStream (Stream m i o a)
-
-rawParStream :: forall m i o a. ParStream m i o a -> (ReaderT (Tuple (m i) (o -> m Unit)) m a)
-rawParStream (ParStream (Stream s)) = s
-
 rawStream :: forall m i o a. Stream m i o a -> (ReaderT (Tuple (m i) (o -> m Unit)) m a)
 rawStream (Stream s) = s
 
@@ -101,16 +95,3 @@ derive newtype instance Monad m => Monad (Stream m i o)
 derive newtype instance MonadEffect m => MonadEffect (Stream m i o)
 
 derive newtype instance MonadAff m => MonadAff (Stream m i o)
-
-
-instance Parallel f m => Functor (ParStream m i o) where
-   map f (ParStream s) = ParStream (f <$> s)
-instance Parallel f m => Apply (ParStream m i o) where 
-   apply fab fa = ParStream <<< Stream $ sequential $ apply (parallel $ rawParStream fab) (parallel $ rawParStream fa)
-instance Parallel f m => Applicative (ParStream m i o) where 
-   pure = ParStream <<< Stream <<< sequential <<< pure
-
-instance Parallel f m => Parallel (ParStream m i o) (Stream m i o) where
-    parallel = ParStream
-    sequential (ParStream s) = s
-
