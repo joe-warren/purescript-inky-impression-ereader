@@ -89,13 +89,10 @@ clickProcessor = do
             mc3 <- timeOut (500.0 # Milliseconds)
             case mc3 of
               Nothing -> do
-                 liftEffect $ log "s"
                  SR.yield ShortTap
-              Just false -> liftEffect $ log "here"
+              Just false -> pure unit
               Just true -> do 
-                  liftEffect $ log "d"
                   c4 <- SR.await
-                  liftEffect $ log $ show c4
                   unless c4 $ SR.yield DoubleTap 
   clickProcessor
         
