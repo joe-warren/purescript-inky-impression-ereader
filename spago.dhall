@@ -24,7 +24,8 @@ to generate this file without the comments in this block.
      "foldable-traversable",
      "maybe",
      "parallel",
-     "tuples"]
+     "tuples",
+     "transformers"]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
