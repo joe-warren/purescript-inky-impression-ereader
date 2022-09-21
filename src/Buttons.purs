@@ -17,15 +17,12 @@ import Effect.Console (log)
 import Effect.Class (liftEffect)
 import Control.Applicative (when, unless)
 import Control.Monad (join)
-import Control.Parallel.Class (sequential, parallel)
+import Control.Parallel.Class (class Parallel, sequential, parallel)
 import Data.Foldable (oneOf)
 import Data.Maybe (Maybe (..), isJust)
 import Effect.Aff.AVar as AVar
-
-import Pipes hiding (discard)
-import Pipes.Prelude as P
-import Pipes.Core (Producer, Pipe, runEffect)
-import Pipes.Aff (send, spawn, split, unbounded, fromInput, input, toOutput, recv, new, realTime, seal, kill)
+import Streams as SR
+import Streams ((>->))
 import Data.Tuple
 import Effect.Now (nowDateTime)
 import Data.DateTime as DateTime
@@ -63,55 +60,46 @@ numToButton _ = Button1
 runButtons :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
 runButtons f = launchAff_ (toAffE (runButtonsRaw (numToButton >>> f)))
 
-rawProducer :: Producer (Tuple ButtonId Boolean) Aff Unit
-rawProducer = do
-   chan <- liftAff (spawn unbounded)
-   liftEffect (runButtons (\b p -> launchAff_ (void ( send (Tuple b p) chan))))
-   fromInput chan
+rawProducer :: SR.Stream Aff Void (Tuple ButtonId Boolean) Unit
+rawProducer = SR.producer $ \send -> do
+   liftEffect (runButtons (\b p -> launchAff_  ( send (Tuple b p))))
 
 
 ---perButton :: forall a b m. Monad m => Pipe a b m Unit -> Pipe (Tuple ButtonId a) (Tuple ButtonId b) m Unit
 ---perButton = ???
 
-timeOut :: forall a b. Show a => Milliseconds -> Pipe a b Aff (Maybe a)
-timeOut t = do
-  av <- liftAff  AVar.empty
-  chan <- liftAff (spawn $ new)
-  liftEffect $ launchAff_  do
-      vv <- map join $ sequential $ oneOf
+timeOut :: forall i o. Milliseconds -> SR.Stream Aff i o (Maybe i)
+timeOut t = SR.consumer $ \await' -> do
+        sequential $ oneOf
               [ parallel $ Nothing <$ (delay t)
-              , parallel $ (Just <$> recv chan)
+              , parallel $ (Just <$> await')
               ]
-      AVar.put vv av
-      seal chan
-  P.take 1 >-> toOutput chan
-  liftAff $ AVar.read av 
 
-clickProcessor :: Pipe Boolean PressType Aff Unit
+clickProcessor :: SR.Stream Aff Boolean PressType Unit
 clickProcessor = do
-  c1 <- await 
+  c1 <- SR.await 
   t1 <- liftEffect nowDateTime
   when c1 $ do
-    c2 <- await
+    c2 <- SR.await
     unless c2 $ do
       t2 <- liftEffect nowDateTime
       if (DateTime.diff t2 t1 > (500.0 # Milliseconds))
-         then yield LongTap 
+         then SR.yield LongTap 
          else do 
             mc3 <- timeOut (500.0 # Milliseconds)
             case mc3 of
               Nothing -> do
                  liftEffect $ log "s"
-                 yield ShortTap
+                 SR.yield ShortTap
               Just false -> liftEffect $ log "here"
               Just true -> do 
                   liftEffect $ log "d"
-                  c4 <- await
+                  c4 <- SR.await
                   liftEffect $ log $ show c4
-                  unless c4 $ yield DoubleTap 
+                  unless c4 $ SR.yield DoubleTap 
   clickProcessor
         
-loggingAction = rawProducer >-> P.map snd >-> clickProcessor >-> P.show >-> P.chain (liftEffect <<< log) >-> P.drain
+loggingAction = rawProducer >-> SR.sMap snd >-> clickProcessor >-> SR.logShowStream >-> SR.drain
 
-loggingPipeline = launchAff_ (runEffect loggingAction)
+loggingPipeline = launchAff_ (SR.runStream loggingAction)
 
