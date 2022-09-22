@@ -28,6 +28,9 @@ import Effect.Now (nowDateTime)
 import Data.DateTime as DateTime
 import Data.Time.Duration (Milliseconds (..))
 
+import RawWindowedButtons as WindowedButtons
+import RawRPiButtons as RPiButtons
+
 data ButtonId = Button1 | Button2 | Button3 | Button4 
 
 derive instance genericButtonId :: Generic ButtonId _
@@ -42,7 +45,6 @@ derive instance genericPressType :: Generic PressType _
 instance showPressType :: Show PressType where
   show = genericShow
 
-foreign import runButtonsRaw :: (Int -> Boolean -> Effect Unit) -> Effect (Promise Unit)
 
 buttonNum :: ButtonId -> Int
 buttonNum Button1 = 1
@@ -58,12 +60,11 @@ numToButton 4 = Button4
 numToButton _ = Button1
 
 runButtons :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
-runButtons f = launchAff_ (toAffE (runButtonsRaw (numToButton >>> f)))
+runButtons f = launchAff_ (toAffE (WindowedButtons.runButtonsRaw (numToButton >>> f)))
 
 rawProducer :: SR.Stream Aff Void (Tuple ButtonId Boolean) Unit
 rawProducer = SR.producer $ \send -> do
    liftEffect (runButtons (\b p -> launchAff_  ( send (Tuple b p))))
-
 
 ---perButton :: forall a b m. Monad m => Pipe a b m Unit -> Pipe (Tuple ButtonId a) (Tuple ButtonId b) m Unit
 ---perButton = ???
