@@ -60,7 +60,7 @@ numToButton 4 = Button4
 numToButton _ = Button1
 
 runButtons :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
-runButtons f = launchAff_ (toAffE (WindowedButtons.runButtonsRaw (numToButton >>> f)))
+runButtons f = launchAff_ (toAffE (RPiButtons.runButtonsRaw (numToButton >>> f)))
 
 rawProducer :: SR.Stream Aff Void (Tuple ButtonId Boolean) Unit
 rawProducer = SR.producer $ \send -> do
