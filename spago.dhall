@@ -25,7 +25,9 @@ to generate this file without the comments in this block.
      "maybe",
      "parallel",
      "tuples",
-     "transformers"]
+     "transformers",
+     "lists",
+     "profunctor"]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }

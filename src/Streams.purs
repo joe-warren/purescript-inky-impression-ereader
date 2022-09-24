@@ -3,12 +3,14 @@ module Streams
   , Stream(..)
   , await
   , chain
+  , concurrently
   , consumer
   , drain
   , logShowStream
   , producer
   , runStream
   , sApp
+  , sFilter
   , sMap
   , yield
   )
@@ -27,7 +29,10 @@ import Effect.Class.Console (logShow)
 import Effect.Class (class MonadEffect)
 
 import Control.Parallel.Class (class Parallel, sequential, parallel)
-import Data.Foldable (foldMap)
+import Data.Traversable (sequence, traverse)
+import Data.Profunctor.Strong ((&&&))
+import Data.Foldable (class Foldable, fold, foldMap, traverse_)
+import Data.List as List
 
 import Data.Semigroup (append)
 newtype Stream m i o a = Stream (ReaderT (Tuple (m i) (o -> m Unit)) m a)
@@ -36,7 +41,10 @@ rawStream :: forall m i o a. Stream m i o a -> (ReaderT (Tuple (m i) (o -> m Uni
 rawStream (Stream s) = s
 
 runStream :: forall m i o a. MonadAff m => Stream m i o a -> m a
-runStream s = runReaderT (rawStream s) (Tuple (liftAff never) (const (pure unit)))
+runStream = runRaw (liftAff never) (const (pure unit))
+
+runRaw :: forall m i o a. m i -> (o -> m Unit) -> Stream m i o a -> m a
+runRaw aw ye s = runReaderT (rawStream s) (Tuple aw ye)
 
 await :: forall m i o. Monad m => Stream m i o i
 await = Stream $ join (lift <<< fst <$> ask)
@@ -59,7 +67,7 @@ drain = do
    _ <- await
    drain
 
-sMap :: forall m i o a. Monad m => ( i -> o) -> Stream m i o a
+sMap :: forall m i o a. Monad m => (i -> o) -> Stream m i o a
 sMap f = sApp (pure <<< f)
 
 sApp :: forall m i o a. Monad m => (i -> m o) -> Stream m i o a
@@ -68,6 +76,14 @@ sApp f =
               i <- await
               o <- Stream <<< lift $ f i
               yield o
+              go
+  in go
+
+sFilter :: forall m i a. Monad m => (i -> Boolean) -> Stream m i i a
+sFilter f = 
+  let go = do
+              i <- await
+              when (f i) (yield i)
               go
   in go
 
@@ -81,8 +97,22 @@ chain inp out = Stream $ do
     --r1 <- lift $ runReaderT (runStream inp) (Tuple awaitIn (\o -> liftAff $ AVar.put o av)) 
     --r2 <- lift $ runReaderT (runStream out) (Tuple (liftAff $ AVar.take av) yieldOut)
     sequential $ append <$>
-        (parallel <<< lift $ runReaderT (rawStream inp) (Tuple awaitIn (\o -> liftAff $ AVar.put o av))) <*>
-        (parallel <<< lift $ runReaderT (rawStream out) (Tuple (liftAff $ AVar.take av) yieldOut))
+        (parallel <<< lift $ runRaw awaitIn (\o -> liftAff $ AVar.put o av) inp) <*>
+        (parallel <<< lift $ runRaw (liftAff $ AVar.take av) yieldOut out)
+
+
+concurrently ::forall m f i o a t. Monad m => MonadAff m => Parallel f m => Foldable t => Monoid a => t (Stream m i o a) -> Stream m i o a
+concurrently vs = Stream $ do
+    let vvs = List.fromFoldable vs
+    Tuple awaitIn yieldOut <- ask
+    withAvars <- lift $ traverse (sequence <<< (flip Tuple $ liftAff AVar.empty)) vvs
+    let avars = snd <$> withAvars
+    let push = do
+                  v <- awaitIn
+                  liftAff $ traverse_ (AVar.put v) avars
+                  push
+    let runOne (Tuple s av) = parallel $ runRaw (liftAff $ AVar.take av) yieldOut s
+    lift <<< sequential $ (parallel push *> (fold <$> traverse runOne withAvars))
 
 infixr 5 chain as >->
         
