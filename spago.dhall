@@ -29,7 +29,10 @@ to generate this file without the comments in this block.
      "lists",
      "control",
      "optparse",
-     "foreign"]
+     "foreign", 
+     "typelevel",
+     "arrays",
+     "integers"]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }

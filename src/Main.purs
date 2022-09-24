@@ -22,7 +22,7 @@ main =
         mode <- OA.flag' Buttons.WindowedMode ( OA.long "windowed" ) <|> pure Buttons.RPiMode
         in do
               _ <- launchAff $ do
-                  im <- Image.loadPalettizedImage "assets/large-book-test.png"
+                  im <- Image.loadSizedPalettizedImage Image.screenWidth Image.screenHeight "assets/large-book-test.png"
                   case im of 
                     Left str -> liftEffect $ log str
                     Right img -> liftEffect $ log "loaded image" 
