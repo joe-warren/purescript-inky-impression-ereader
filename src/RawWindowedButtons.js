@@ -13,7 +13,7 @@ exports.runButtonsRaw = function(callback){
        const btn = await tk.Button$(root, {text: "" + i});
        await btn.bind('<ButtonPress>', makeCallback(i, true))
        await btn.bind('<ButtonRelease>', makeCallback(i, false))
-       await btn.grid({column: i, row: 0});
+       await btn.grid({column: 0, row: i});
     }
 
     await root.mainloop()

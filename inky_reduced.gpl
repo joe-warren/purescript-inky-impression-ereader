@@ -1,0 +1,12 @@
+GIMP Palette
+Name: Inky Reduced
+Columns: 1
+#
+0 0 0           Black
+255 255 255     White
+0 255 0         Green
+0 0 255         Blue
+255 0 0         Red
+255 255 0       Yellow
+255 140 0       Orange
+255 255 255     Clear

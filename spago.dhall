@@ -22,12 +22,14 @@ to generate this file without the comments in this block.
      "now",
      "foldable-traversable",
      "maybe",
+     "either",
      "parallel",
      "tuples",
      "transformers",
      "lists",
      "control",
-     "optparse"]
+     "optparse",
+     "foreign"]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
