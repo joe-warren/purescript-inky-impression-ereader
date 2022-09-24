@@ -33,6 +33,11 @@ import RawRPiButtons as RPiButtons
 
 data ButtonId = Button1 | Button2 | Button3 | Button4 
 
+derive instance Eq ButtonId
+
+buttonIds :: Array ButtonId
+buttonIds = [Button1, Button2, Button3, Button4]
+
 derive instance genericButtonId :: Generic ButtonId _
 
 instance showButtonId :: Show ButtonId where
@@ -97,7 +102,7 @@ clickProcessor = do
                   unless c4 $ SR.yield DoubleTap 
   clickProcessor
         
-loggingAction = rawProducer >-> SR.sMap snd >-> clickProcessor >-> SR.logShowStream >-> SR.drain
+loggingAction = rawProducer >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream >-> SR.drain
 
 loggingPipeline = launchAff_ (SR.runStream loggingAction)
 

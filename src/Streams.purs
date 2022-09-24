@@ -6,6 +6,7 @@ module Streams
   , concurrently
   , consumer
   , drain
+  , inChannels
   , logShowStream
   , producer
   , runStream
@@ -33,8 +34,9 @@ import Data.Traversable (sequence, traverse)
 import Data.Profunctor.Strong ((&&&))
 import Data.Foldable (class Foldable, fold, foldMap, traverse_)
 import Data.List as List
-
+import Data.Eq (class Eq)
 import Data.Semigroup (append)
+
 newtype Stream m i o a = Stream (ReaderT (Tuple (m i) (o -> m Unit)) m a)
 
 rawStream :: forall m i o a. Stream m i o a -> (ReaderT (Tuple (m i) (o -> m Unit)) m a)
@@ -101,7 +103,7 @@ chain inp out = Stream $ do
         (parallel <<< lift $ runRaw (liftAff $ AVar.take av) yieldOut out)
 
 
-concurrently ::forall m f i o a t. Monad m => MonadAff m => Parallel f m => Foldable t => Monoid a => t (Stream m i o a) -> Stream m i o a
+concurrently :: forall m f i o a t. Monad m => MonadAff m => Parallel f m => Foldable t => Monoid a => t (Stream m i o a) -> Stream m i o a
 concurrently vs = Stream $ do
     let vvs = List.fromFoldable vs
     Tuple awaitIn yieldOut <- ask
@@ -113,6 +115,10 @@ concurrently vs = Stream $ do
                   push
     let runOne (Tuple s av) = parallel $ runRaw (liftAff $ AVar.take av) yieldOut s
     lift <<< sequential $ (parallel push *> (fold <$> traverse runOne withAvars))
+
+inChannels :: forall m f i o c a t. Monad m => MonadAff m => Parallel f m => Monoid a => Functor t => Foldable t => Eq c => t c -> Stream m i o a -> Stream m (Tuple c i) (Tuple c o) a
+inChannels cs s = let oneChannel c = sFilter ((_ == c) <<< fst) >-> sMap snd >-> s >-> sMap (Tuple c)
+                   in concurrently (oneChannel <$> cs)
 
 infixr 5 chain as >->
         
