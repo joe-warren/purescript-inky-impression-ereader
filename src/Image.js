@@ -1,4 +1,4 @@
-const {python} = require('pythonia');
+const {python, py} = require('pythonia');
 
 exports.openPalettized = function(left){
     return function(right){
@@ -19,6 +19,7 @@ exports.openPalettized = function(left){
 
 exports.size = function(img){
     return async function(){
-        return await img.size()
+        let images = await python("./python_modules/images.py")
+        return await images.size(img)
     }
 }

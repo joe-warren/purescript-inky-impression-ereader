@@ -14,6 +14,7 @@ import Image as Image
 import Options.Applicative as OA
 import Control.Alt ((<|>))
 import Data.Either (Either(..))
+import RPiDisplay as RPiDisplay
 
 main :: Effect Unit
 main = 
@@ -25,7 +26,9 @@ main =
                   im <- Image.loadSizedPalettizedImage Image.screenWidth Image.screenHeight "assets/large-book-test.png"
                   case im of 
                     Left str -> liftEffect $ log str
-                    Right img -> liftEffect $ log "loaded image" 
+                    Right img -> do
+                        liftEffect $ log "loading image"
+                        RPiDisplay.display img 
 
               log "📖"
               --Buttons.loggingPipeline mode

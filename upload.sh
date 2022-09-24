@@ -3,4 +3,4 @@ npx spago bundle-app --to dist/index.js
 cp -r python_modules dist
 cp -r assets dist
 
-rsync -r dist pi@raspberrypi:ereader-scratch-2
+rsync -r dist/ pi@raspberrypi:ereader-scratch-2/

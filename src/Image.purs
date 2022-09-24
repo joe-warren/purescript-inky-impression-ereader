@@ -5,6 +5,8 @@ module Image
   , loadSizedPalettizedImage
   , screenWidth
   , screenHeight
+  , ScreenHeight
+  , ScreenWidth
   ) where
 
 import Prelude

@@ -17,8 +17,12 @@ def openPalettized(path):
         if img.mode != 'P':
             return f"{path} is not palettized"
         p = img.getpalette()
-        if p != palette:
+        if p[0:len(palette)] != palette:
            return f"{path} has the wrong palette (got ${p})"
         return img
     except FileNotFoundError as e:
         return f"couldn't find ${path} (got ${e})"
+
+def size(img):
+    (w, h) = img.size
+    return [w, h]
