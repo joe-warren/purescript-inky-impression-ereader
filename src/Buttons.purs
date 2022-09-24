@@ -1,8 +1,8 @@
 
 module Buttons
   ( ButtonId(..)
-  , runButtons
   , loggingPipeline
+  , runButtons
   )
   where
 
@@ -10,20 +10,15 @@ import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Prelude
 import Effect (Effect)
-import Effect.Aff (Aff, runAff, launchAff_, delay, error)
-import Effect.Aff.Class (liftAff)
-import Control.Promise (Promise, toAffE)
-import Effect.Console (log)
+import Effect.Aff (Aff, launchAff_, delay)
+import Control.Promise as Promise
 import Effect.Class (liftEffect)
-import Control.Applicative (when, unless)
-import Control.Monad (join)
-import Control.Parallel.Class (class Parallel, sequential, parallel)
+import Control.Parallel.Class (sequential, parallel)
 import Data.Foldable (oneOf)
-import Data.Maybe (Maybe (..), isJust)
-import Effect.Aff.AVar as AVar
+import Data.Maybe (Maybe (..))
 import Streams as SR
 import Streams ((>->))
-import Data.Tuple
+import Data.Tuple (Tuple (..))
 import Effect.Now (nowDateTime)
 import Data.DateTime as DateTime
 import Data.Time.Duration (Milliseconds (..))
@@ -50,13 +45,6 @@ derive instance genericPressType :: Generic PressType _
 instance showPressType :: Show PressType where
   show = genericShow
 
-
-buttonNum :: ButtonId -> Int
-buttonNum Button1 = 1
-buttonNum Button2 = 2
-buttonNum Button3 = 3
-buttonNum Button4 = 4
-
 numToButton :: Int -> ButtonId
 numToButton 1 = Button1
 numToButton 2 = Button2
@@ -65,7 +53,7 @@ numToButton 4 = Button4
 numToButton _ = Button1
 
 runButtons :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
-runButtons f = launchAff_ (toAffE (RPiButtons.runButtonsRaw (numToButton >>> f)))
+runButtons f = launchAff_ (Promise.toAffE (RPiButtons.runButtonsRaw (numToButton >>> f)))
 
 rawProducer :: SR.Stream Aff Void (Tuple ButtonId Boolean) Unit
 rawProducer = SR.producer $ \send -> do
@@ -102,7 +90,8 @@ clickProcessor = do
                   unless c4 $ SR.yield DoubleTap 
   clickProcessor
         
-loggingAction = rawProducer >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream >-> SR.drain
-
-loggingPipeline = launchAff_ (SR.runStream loggingAction)
+loggingPipeline :: Effect Unit
+loggingPipeline = 
+  let stream = rawProducer >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream >-> SR.drain
+  in launchAff_ (SR.runStream stream)
 

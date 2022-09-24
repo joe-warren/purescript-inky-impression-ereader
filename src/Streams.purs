@@ -19,23 +19,20 @@ module Streams
 
 import Prelude
 
-import Control.Monad.Reader.Trans
+import Control.Monad.Reader.Trans (ReaderT, ask, lift, runReaderT)
 
 import Data.Tuple (Tuple (..), fst, snd)
 
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Aff (Aff, Error, delay, forkAff, never)
+import Effect.Aff (never)
 import Effect.Aff.AVar as AVar
 import Effect.Class.Console (logShow)
 import Effect.Class (class MonadEffect)
 
 import Control.Parallel.Class (class Parallel, sequential, parallel)
 import Data.Traversable (sequence, traverse)
-import Data.Profunctor.Strong ((&&&))
-import Data.Foldable (class Foldable, fold, foldMap, traverse_)
+import Data.Foldable (class Foldable, fold, traverse_)
 import Data.List as List
-import Data.Eq (class Eq)
-import Data.Semigroup (append)
 
 newtype Stream m i o a = Stream (ReaderT (Tuple (m i) (o -> m Unit)) m a)
 
@@ -96,8 +93,6 @@ chain :: forall m f i e o a. (Monad m) => (MonadAff m) => (Parallel f m) => (Mon
 chain inp out = Stream $ do 
     av <- lift <<< liftAff $ AVar.empty
     Tuple awaitIn yieldOut <- ask
-    --r1 <- lift $ runReaderT (runStream inp) (Tuple awaitIn (\o -> liftAff $ AVar.put o av)) 
-    --r2 <- lift $ runReaderT (runStream out) (Tuple (liftAff $ AVar.take av) yieldOut)
     sequential $ append <$>
         (parallel <<< lift $ runRaw awaitIn (\o -> liftAff $ AVar.put o av) inp) <*>
         (parallel <<< lift $ runRaw (liftAff $ AVar.take av) yieldOut out)
