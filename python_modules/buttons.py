@@ -15,4 +15,7 @@ for pin in buttons:
     GPIO.add_event_detect(pin, GPIO.BOTH, cb)
 
 def next():
-    return q.get()
+    try:
+        return q.get(timeout=1)
+    except queue.Empty:
+        return None
