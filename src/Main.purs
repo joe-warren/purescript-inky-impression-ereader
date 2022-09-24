@@ -1,4 +1,7 @@
-module Main where
+module Main
+  ( main
+  )
+  where
 
 import Prelude
 
@@ -7,19 +10,14 @@ import Effect.Console (log)
 
 import Buttons as Buttons
 
+import Options.Applicative as OA
+import Control.Alt ((<|>))
+
 main :: Effect Unit
-main = do
-  log "🍝"
-  --Buttons.runButtons buttonCallback
-  Buttons.loggingPipeline
-
-
-buttonCallback :: Buttons.ButtonId -> Boolean -> Effect Unit
-buttonCallback Buttons.Button1 true = log "1 Down"
-buttonCallback Buttons.Button2 true = log "2 Down"
-buttonCallback Buttons.Button3 true = log "3 Down"
-buttonCallback Buttons.Button4 true = log "4 Down"
-buttonCallback Buttons.Button1 false = log "1 Up"
-buttonCallback Buttons.Button2 false = log "2 Up"
-buttonCallback Buttons.Button3 false = log "3 Up"
-buttonCallback Buttons.Button4 false = log "4 Up"
+main = 
+  let prefs = (OA.fullDesc <> OA.progDesc "EReader Software") 
+   in join <<< OA.execParser <<< ((flip OA.info) prefs) $ ado
+        mode <- OA.flag' Buttons.WindowedMode ( OA.long "windowed" ) <|> pure Buttons.RPiMode
+        in do
+              log "📖"
+              Buttons.loggingPipeline mode

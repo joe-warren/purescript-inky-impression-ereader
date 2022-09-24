@@ -1,8 +1,8 @@
 
 module Buttons
   ( ButtonId(..)
+  , Mode(..)
   , loggingPipeline
-  , runButtons
   )
   where
 
@@ -25,6 +25,8 @@ import Data.Time.Duration (Milliseconds (..))
 
 import RawWindowedButtons as WindowedButtons
 import RawRPiButtons as RPiButtons
+
+data Mode = RPiMode | WindowedMode 
 
 data ButtonId = Button1 | Button2 | Button3 | Button4 
 
@@ -52,11 +54,19 @@ numToButton 3 = Button3
 numToButton 4 = Button4
 numToButton _ = Button1
 
-runButtons :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
-runButtons f = launchAff_ (Promise.toAffE (RPiButtons.runButtonsRaw (numToButton >>> f)))
+runButtonsRPi :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
+runButtonsRPi f = launchAff_ (Promise.toAffE (RPiButtons.runButtonsRaw (numToButton >>> f)))
 
-rawProducer :: SR.Stream Aff Void (Tuple ButtonId Boolean) Unit
-rawProducer = SR.producer $ \send -> do
+runButtonsWindowed :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
+runButtonsWindowed f = launchAff_ (Promise.toAffE (WindowedButtons.runButtonsRaw (numToButton >>> f)))
+
+rawProducer :: Mode -> SR.Stream Aff Void (Tuple ButtonId Boolean) Unit
+rawProducer mode = 
+  let runButtons = 
+        case mode of 
+          RPiMode -> runButtonsRPi
+          WindowedMode -> runButtonsWindowed
+  in SR.producer $ \send -> do
    liftEffect (runButtons (\b p -> launchAff_  ( send (Tuple b p))))
 
 ---perButton :: forall a b m. Monad m => Pipe a b m Unit -> Pipe (Tuple ButtonId a) (Tuple ButtonId b) m Unit
@@ -90,8 +100,8 @@ clickProcessor = do
                   unless c4 $ SR.yield DoubleTap 
   clickProcessor
         
-loggingPipeline :: Effect Unit
-loggingPipeline = 
-  let stream = rawProducer >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream >-> SR.drain
+loggingPipeline :: Mode -> Effect Unit
+loggingPipeline mode = 
+  let stream = rawProducer mode >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream >-> SR.drain
   in launchAff_ (SR.runStream stream)
 
