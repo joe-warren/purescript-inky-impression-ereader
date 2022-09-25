@@ -7,7 +7,7 @@ This is a WIP of one, written in Purescript, using pythonia to bind to the pytho
 It's early days, but the plan is to build an FRP framework around.
 
 * 4 button inputs
-* paletized (7 colour) images
+* palettized (7 colour) images
 * very very slow screen updates
 * the need to save and restore state on power failure
 
