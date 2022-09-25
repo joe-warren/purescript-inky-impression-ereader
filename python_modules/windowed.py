@@ -2,10 +2,10 @@ import tkinter as tk
 from PIL import ImageTk
 
 root = tk.Tk()
-root.geometry('620x440')
+root.geometry('640x449')
 root.grid()
-
-buttons = [tk.Button(root, text=str(i+1)) for i in range(4)]
+root.title("EReader Dev Preview")
+buttons = [tk.Button(root, text=str(i+1), pady=40) for i in range(4)]
 
 for i, btn in enumerate(buttons):
     btn.grid(column= 1, row=i+1)
