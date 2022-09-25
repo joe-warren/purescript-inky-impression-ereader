@@ -60,7 +60,7 @@ runButtonsRPi f = launchAff_ (Promise.toAffE (RPiButtons.runButtonsRaw (numToBut
 runButtonsWindowed :: (ButtonId -> Boolean -> Effect Unit) -> Effect Unit
 runButtonsWindowed f = launchAff_ (Promise.toAffE (WindowedButtons.runButtonsRaw (numToButton >>> f)))
 
-rawProducer :: Mode -> SR.Stream Aff Void (Tuple ButtonId Boolean) Unit
+rawProducer :: Mode -> SR.Stream Void (Tuple ButtonId Boolean) Aff Unit
 rawProducer mode = 
   let runButtons = 
         case mode of 
@@ -72,14 +72,14 @@ rawProducer mode =
 ---perButton :: forall a b m. Monad m => Pipe a b m Unit -> Pipe (Tuple ButtonId a) (Tuple ButtonId b) m Unit
 ---perButton = ???
 
-timeOut :: forall i o. Milliseconds -> SR.Stream Aff i o (Maybe i)
+timeOut :: forall i o. Milliseconds -> SR.Stream i o Aff (Maybe i)
 timeOut t = SR.consumer $ \await' -> do
         sequential $ oneOf
               [ parallel $ Nothing <$ (delay t)
               , parallel $ (Just <$> await')
               ]
 
-clickProcessor :: SR.Stream Aff Boolean PressType Unit
+clickProcessor :: SR.Stream Boolean PressType Aff Unit
 clickProcessor = do
   c1 <- SR.await 
   t1 <- liftEffect nowDateTime
