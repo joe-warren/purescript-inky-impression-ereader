@@ -2,7 +2,7 @@ const {python} = require('pythonia');
 
 exports.runButtonsRaw = function(callback){
    async function go() {    
-    const buttons = await python('./buttons.py')
+    const buttons = await python('./python_modules/buttons.py')
     while(true){
         const r = await buttons.next();
         if(r){

@@ -15,6 +15,7 @@ import Options.Applicative as OA
 import Control.Alt ((<|>))
 import Data.Either (Either(..))
 import RPiDisplay as RPiDisplay
+import WindowedDisplay as WindowedDisplay
 
 main :: Effect Unit
 main = 
@@ -28,7 +29,8 @@ main =
                     Left str -> liftEffect $ log str
                     Right img -> do
                         liftEffect $ log "loading image"
-                        RPiDisplay.display img 
-
+                        case mode of 
+                          Buttons.RPiMode -> RPiDisplay.display img 
+                          Buttons.WindowedMode -> WindowedDisplay.display img
               log "📖"
-              --Buttons.loggingPipeline mode
+              Buttons.loggingPipeline mode
