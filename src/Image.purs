@@ -1,13 +1,21 @@
 module Image
   ( PalettizedImage(..)
-  , Sized (..)
+  , ScreenHeight
+  , ScreenHeightHalf
+  , ScreenWidth
+  , Sized(..)
+  , concatH
+  , concatHRaw
+  , concatV
+  , concatVRaw
   , loadPalettizedImage
   , loadSizedPalettizedImage
-  , screenWidth
   , screenHeight
-  , ScreenHeight
-  , ScreenWidth
-  ) where
+  , screenHeightHalf
+  , screenWidth
+  , screenWidthHalf
+  )
+  where
 
 import Prelude
 
@@ -21,6 +29,7 @@ import Data.Either (Either(..))
 import Control.Monad ((=<<))
 import  Data.Typelevel.Num.Sets 
 import  Data.Typelevel.Num.Reps
+import  Data.Typelevel.Num.Ops (class Add)
 import Type.Proxy (Proxy (..))
 import Data.Int (round)
 import Data.Array as Array
@@ -40,9 +49,23 @@ screenWidth = Proxy
 screenHeight :: Proxy ScreenHeight
 screenHeight = Proxy
 
+
+type ScreenWidthHalf = (D3 :* D0) :* D0
+
+screenWidthHalf :: Proxy ScreenWidthHalf
+screenWidthHalf = Proxy
+
+type ScreenHeightHalf = (D2 :* D2) :* D4
+
+screenHeightHalf :: Proxy ScreenHeightHalf
+screenHeightHalf = Proxy
+
 foreign import openPalettized :: (String -> Either String PalettizedImage) -> (Foreign -> Either String PalettizedImage) -> String -> Effect (Promise.Promise (Either String PalettizedImage))
 
 foreign import size :: (Foreign) -> Effect (Promise.Promise (Array Number))
+
+foreign import concatHRaw :: Foreign -> Foreign -> Effect (Promise.Promise (Foreign))
+foreign import concatVRaw :: Foreign -> Foreign -> Effect (Promise.Promise (Foreign))
 
 loadPalettizedImage :: String -> Aff (Either String PalettizedImage)
 loadPalettizedImage filename = Promise.toAffE (openPalettized (Left) (Right <<< PalettizedImage) filename)
@@ -65,3 +88,9 @@ loadSizedPalettizedImage w h path = do
         Left e -> pure $ Left e
         Right img -> checkSize w h img
 
+concatH :: forall w1 w2 wTot h. Pos w1 => Pos w2 => Pos h => Add w1 w2 wTot => Sized w1 h PalettizedImage -> Sized w2 h PalettizedImage -> Aff (Sized wTot h PalettizedImage) 
+concatH (Sized (PalettizedImage a)) (Sized (PalettizedImage b)) = Sized <<< PalettizedImage <$> Promise.toAffE (concatHRaw a b) 
+
+
+concatV :: forall w h1 h2 hTot. Pos w => Pos h1 => Pos h2 => Add h1 h2 hTot => Sized w h1 PalettizedImage -> Sized w h2 PalettizedImage -> Aff (Sized w hTot PalettizedImage) 
+concatV (Sized (PalettizedImage a)) (Sized (PalettizedImage b)) = Sized <<< PalettizedImage <$> Promise.toAffE (concatVRaw a b) 

@@ -15,6 +15,11 @@ exports.runButtonsRaw = function(callback){
     }
 
     await window.run()
+    var done = false
+    while(!done){
+      done = await window.isDone();
+    }
+
     python.exit() // Make sure to exit Python in the end to allow node to exit. You can also use process.exit.
   }
   return () => go();

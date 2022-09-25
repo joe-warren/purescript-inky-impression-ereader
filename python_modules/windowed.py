@@ -1,5 +1,7 @@
 import tkinter as tk
 from PIL import ImageTk
+import threading 
+import queue
 
 root = tk.Tk()
 root.geometry('640x449')
@@ -20,8 +22,14 @@ tk_canvas_image = None
 def display(img):
     global tk_canvas_image
     tk_canvas_image = ImageTk.PhotoImage(img.convert('RGB'), master=canvas)
-    print(tk_canvas_image)
     canvas.create_image(0, 0,image=tk_canvas_image, anchor='nw')
 
+q = queue.Queue(maxsize=1);
+
 def run():
-    root.mainloop()
+    pass
+
+def isDone():
+    root.update_idletasks()
+    root.update()
+    return False

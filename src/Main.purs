@@ -8,7 +8,8 @@ import Prelude
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
-import Effect.Aff (launchAff)
+import Effect.Aff (launchAff, delay)
+import Data.Time.Duration (Milliseconds (..))
 import Buttons as Buttons
 import Image as Image
 import Options.Applicative as OA
@@ -24,13 +25,15 @@ main =
         mode <- OA.flag' Buttons.WindowedMode ( OA.long "windowed" ) <|> pure Buttons.RPiMode
         in do
               _ <- launchAff $ do
-                  im <- Image.loadSizedPalettizedImage Image.screenWidth Image.screenHeight "assets/large-book-test.png"
+                  im <- Image.loadSizedPalettizedImage Image.screenWidthHalf Image.screenHeightHalf "assets/large-book-test-quarter.png"
                   case im of 
                     Left str -> liftEffect $ log str
                     Right img -> do
                         liftEffect $ log "loading image"
+                        im2 <- Image.concatH img img
+                        im3 <- Image.concatV im2 im2
                         case mode of 
-                          Buttons.RPiMode -> RPiDisplay.display img 
-                          Buttons.WindowedMode -> WindowedDisplay.display img
+                          Buttons.RPiMode -> RPiDisplay.display im3
+                          Buttons.WindowedMode -> WindowedDisplay.display im3
               log "📖"
               Buttons.loggingPipeline mode

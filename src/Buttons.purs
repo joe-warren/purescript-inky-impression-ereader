@@ -103,5 +103,6 @@ clickProcessor = do
 loggingPipeline :: Mode -> Effect Unit
 loggingPipeline mode = 
   let stream = rawProducer mode >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream >-> SR.drain
-  in launchAff_ (SR.runStream stream)
+  in launchAff_ $ do
+      (SR.runStream stream)
 

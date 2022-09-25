@@ -6,3 +6,4 @@ import windowed as window
 
 buttons = window.buttons
 run = window.run
+isDone = window.isDone
