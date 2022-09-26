@@ -25,15 +25,11 @@ main =
         mode <- OA.flag' Buttons.WindowedMode ( OA.long "windowed" ) <|> pure Buttons.RPiMode
         in do
               _ <- launchAff $ do
-                  im <- Image.loadSizedPalettizedImage Image.screenWidthHalf Image.screenHeightHalf "assets/large-book-test-quarter.png"
-                  case im of 
-                    Left str -> liftEffect $ log str
-                    Right img -> do
-                        liftEffect $ log "loading image"
-                        im2 <- Image.concatH img img
-                        im3 <- Image.concatV im2 im2
-                        case mode of 
-                          Buttons.RPiMode -> RPiDisplay.display im3
-                          Buttons.WindowedMode -> WindowedDisplay.display im3
+                  let im = Image.loadSizedPalettizedImage Image.screenWidthHalf Image.screenHeightHalf "assets/large-book-test-quarter.png"
+                  let im2 = Image.concatH im im
+                  let im3 = Image.concatV im2 im2
+                  case mode of 
+                    Buttons.RPiMode -> RPiDisplay.display im3
+                    Buttons.WindowedMode -> WindowedDisplay.display im3
               log "📖"
               Buttons.loggingPipeline mode

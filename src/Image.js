@@ -23,7 +23,10 @@ exports.openPalettized = function(left){
 exports.size = function(img){
     return async function(){
         let images = await imagesModule
-        return await images.size(img)
+        let [w, h] = await images.size(img)
+        let ww = await w
+        let hh = await h
+        return [ww, hh]
     }
 }
 
@@ -31,11 +34,8 @@ exports.concatHRaw = function (a){
     return function(b){
         return async function(){
             let pil = await python("PIL")
-            let [w1p, hp] = await exports.size(a)()
-            let [w2p, ] = await exports.size(b)()
-            let w1 = await w1p;
-            let w2 = await w2p;
-            let h = await hp;
+            let [w1, h] = await exports.size(a)()
+            let [w2,  ] = await exports.size(b)()
             const dst = await pil.Image.new('P',[w1+w2, h])
             const palette = await a.getpalette()
             await dst.putpalette(palette)
@@ -51,11 +51,8 @@ exports.concatVRaw = function (a){
     return function(b){
         return async function(){
             let pil = await python("PIL")
-            let [wp, h1p] = await exports.size(a)()
-            let [_, h2p] = await exports.size(b)()
-            let w = await wp
-            let h1 = await h1p
-            let h2 = await h2p
+            let [w, h1] = await exports.size(a)()
+            let [ , h2] = await exports.size(b)()
             const dst = await pil.Image.new('P',[w, h1+h2])
             const palette = await a.getpalette()
             await dst.putpalette(palette)

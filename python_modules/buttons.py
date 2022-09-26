@@ -16,6 +16,6 @@ for pin in buttons:
 
 def next():
     try:
-        return q.get(timeout=1)
+        return q.get(block=False)
     except queue.Empty:
         return None
