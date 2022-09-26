@@ -1,5 +1,6 @@
 module Image
-  ( PalettizedImage(..)
+  ( FullscreenImage
+  , PalettizedImage(..)
   , ScreenHeight
   , ScreenHeightHalf
   , ScreenWidth
@@ -7,6 +8,7 @@ module Image
   , concatH
   , concatHRaw
   , concatV
+  , loadArbitraryFullscreenImage
   , loadPalettizedImage
   , loadSizedPalettizedImage
   , runPalettizedImage
@@ -31,13 +33,12 @@ import  Data.Typelevel.Num.Sets
 import  Data.Typelevel.Num.Reps
 import  Data.Typelevel.Num.Ops (class Add)
 import Type.Proxy (Proxy (..))
-import Data.Int (round)
+import Data.Int (round, toNumber)
 import Data.Array as Array
 import Data.Tuple (Tuple (..))
 import Data.Maybe (Maybe (..))
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT, throwError, lift)
 newtype PalettizedImage = PalettizedImage (ExceptT String Aff Foreign)
-
 
 runPalettizedToExcept :: PalettizedImage -> ExceptT String Aff Foreign
 runPalettizedToExcept (PalettizedImage p) = p
@@ -49,6 +50,8 @@ newtype Sized w h a = Sized a
 
 type ScreenWidth = (D6 :* D0) :* D0
 type ScreenHeight = (D4 :* D4) :* D8
+
+type FullscreenImage = Sized ScreenWidth ScreenHeight PalettizedImage
 
 screenWidth :: Proxy ScreenWidth
 screenWidth = Proxy 
@@ -73,6 +76,8 @@ foreign import size :: (Foreign) -> Effect (Promise.Promise (Array Number))
 foreign import concatHRaw :: Foreign -> Foreign -> Effect (Promise.Promise (Foreign))
 foreign import concatVRaw :: Foreign -> Foreign -> Effect (Promise.Promise (Foreign))
 
+foreign import openAndResizeArbitraryImage :: Number -> Number -> (String -> Either String Foreign) -> (Foreign -> Either String Foreign) -> String -> Effect (Promise.Promise (Either String Foreign))
+
 loadPalettizedImage :: String -> PalettizedImage
 loadPalettizedImage filename = PalettizedImage <<< ExceptT $ Promise.toAffE (openPalettized (Left) (Right) filename)
 
@@ -91,6 +96,12 @@ checkSize w h img = Sized <<< PalettizedImage $ do
 loadSizedPalettizedImage :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> String -> Sized w h PalettizedImage
 loadSizedPalettizedImage w h path = checkSize w h (loadPalettizedImage path)
 
+
+loadSizedArbitraryImage :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> String -> Sized w h PalettizedImage
+loadSizedArbitraryImage w h path = Sized <<< PalettizedImage <<< ExceptT <<< Promise.toAffE $ openAndResizeArbitraryImage (toNumber $ toInt' w) (toNumber $ toInt' h) Left Right path
+
+loadArbitraryFullscreenImage :: String -> Sized ScreenWidth ScreenHeight PalettizedImage
+loadArbitraryFullscreenImage = loadSizedArbitraryImage screenWidth screenHeight
 
 concatH :: forall w1 w2 wTot h. Pos w1 => Pos w2 => Pos h => Add w1 w2 wTot => Sized w1 h PalettizedImage -> Sized w2 h PalettizedImage -> Sized wTot h PalettizedImage
 concatH (Sized a) (Sized b) = Sized <<< PalettizedImage $ do

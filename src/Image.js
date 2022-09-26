@@ -20,6 +20,26 @@ exports.openPalettized = function(left){
     }
 }
 
+exports.openAndResizeArbitraryImage = function(w){
+    return function(h){
+        return function(left){
+            return function(right){
+                return function(filename){
+                    return async function go(){
+                        let images = await python("./python_modules/images.py")
+                        let img = await images.openAndResizeArbitrary(w, h, filename)
+                        if (typeof img == 'string'){
+                            return (left(img))
+                        } else {
+                            return right(img)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 exports.size = function(img){
     return async function(){
         let images = await imagesModule

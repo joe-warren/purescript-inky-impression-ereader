@@ -23,6 +23,17 @@ def openPalettized(path):
     except FileNotFoundError as e:
         return f"couldn't find ${path} (got ${e})"
 
+def openAndResizeArbitrary(w, h, path):
+    try:
+        img = Image.open(path).resize([w, h])
+
+        pImg = Image.new('P', [w, h])
+        pImg.putpalette(palette + [0, 0, 0]*(256-8))
+        pImg.paste(img, (0, 0))
+        return pImg
+    except FileNotFoundError as e:
+        return f"couldn't find ${path} (got ${e})"
+
 def size(img):
     (w, h) = img.size
     return [w, h]

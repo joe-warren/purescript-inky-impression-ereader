@@ -2,6 +2,8 @@
 module Buttons
   ( ButtonId(..)
   , Mode(..)
+  , PressType(..)
+  , buttonPipeline
   , loggingPipeline
   )
   where
@@ -99,10 +101,13 @@ clickProcessor = do
                   c4 <- SR.await
                   unless c4 $ SR.yield DoubleTap 
   clickProcessor
-        
+
+buttonPipeline :: Mode -> SR.Stream Void (Tuple ButtonId PressType) Aff Unit
+buttonPipeline mode = rawProducer mode >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream 
+
 loggingPipeline :: Mode -> Effect Unit
 loggingPipeline mode = 
-  let stream = rawProducer mode >-> SR.inChannels buttonIds clickProcessor >-> SR.logShowStream >-> SR.drain
+  let stream = buttonPipeline mode >-> SR.drain
   in launchAff_ $ do
       (SR.runStream stream)
 
