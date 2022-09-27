@@ -14,11 +14,13 @@ import Data.String as String
 import Data.Maybe (Maybe (..), fromMaybe)
 import Data.Traversable (traverse)
 import Type.Proxy (Proxy (..))
+import Data.Tuple 
 
 import  Data.Typelevel.Num.Sets 
 import  Data.Typelevel.Num.Reps
 import  Data.Typelevel.Num.Ops (class Add, class Mul)
 import Image as Image
+import Buttons as Buttons
 
 data FileType = Folder | Image | Unknown
 data File = File FileType String
@@ -58,6 +60,19 @@ joinImageGrid (Grid.Grid v) = let jh (Grid.Horizontal x y z) = x `Image.concatH`
                                in jv $ jh <$> v
  
 
+indexVertical :: forall a. Buttons.ButtonId -> Grid.Vertical a -> a
+indexVertical Buttons.Button1 (Grid.Vertical a _ _ _) = a
+indexVertical Buttons.Button2 (Grid.Vertical _ a _ _) = a
+indexVertical Buttons.Button3 (Grid.Vertical _ _ a _) = a
+indexVertical Buttons.Button4 (Grid.Vertical _ _ _ a) = a
+
+indexHorizontal :: forall a. Buttons.PressType -> Grid.Horizontal a -> a
+indexHorizontal Buttons.ShortTap  (Grid.Horizontal a _ _) = a
+indexHorizontal Buttons.DoubleTap (Grid.Horizontal _ a _) = a
+indexHorizontal Buttons.LongTap   (Grid.Horizontal _ _ a) = a
+
+indexGrid :: forall a. Tuple Buttons.ButtonId Buttons.PressType -> Grid.Grid a -> a
+indexGrid (Tuple button press) (Grid.Grid v) = indexHorizontal press $ indexVertical button v
 
 mkFile :: String -> Aff File
 mkFile path = do
@@ -84,7 +99,7 @@ makeBrowserState dir = do
     let emptyBrowserState = ZA.singleton (pure UpItem)
     pure if Array.length files < 12
         then BrowserState $ ZA.singleton $ fromMaybe EmptyItem <$> Grid.fromArray (Array.cons UpItem (FileItem <$> files))
-        else let mkOneGrid ar = fromMaybe EmptyItem <$> Grid.fromArray ([UpItem, PrevItem, NextItem] <> (FileItem <$> ar))
+        else let mkOneGrid ar = fromMaybe EmptyItem <$> Grid.fromArray ([PrevItem, NextItem, UpItem] <> (FileItem <$> ar))
               in BrowserState $ fromMaybe emptyBrowserState $ ZA.fromArray (mkOneGrid <$> chunk 9 files)
 
 
@@ -92,10 +107,18 @@ data FileBrowserState = InBrowser String BrowserState
     | InDirectory String FileBrowserState
     | InGallery String (ZA.ZipperArray String)
 
+update :: Tuple Buttons.ButtonId Buttons.PressType -> Maybe BrowserState -> Aff (Maybe BrowserState)
+update _ Nothing = pure Nothing
+update p (Just (BrowserState z)) =
+   pure <<< Just $ case indexGrid p (ZA.current z) of
+                PrevItem -> BrowserState $ fromMaybe (ZA.goLast z) $ ZA.goPrev z
+                NextItem -> BrowserState $ fromMaybe (ZA.goFirst z) $ ZA.goNext z
+                _ -> BrowserState z
+
+
 fileBrowserComponent :: String -> Aff (EReaderComponent (Maybe BrowserState))
 fileBrowserComponent dir = do
     state <- makeBrowserState dir 
-    let update _ st = pure st
     let render st = 
           case st of
             (Just (BrowserState s)) -> joinImageGrid $ itemImage <$> (ZA.current s)
