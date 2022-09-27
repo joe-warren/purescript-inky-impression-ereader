@@ -32,7 +32,12 @@ to generate this file without the comments in this block.
      "foreign", 
      "typelevel",
      "arrays",
-     "integers"]
+     "integers",
+     "naturals",
+     "node-fs-aff",
+     "node-fs",
+     "strings",
+     "exceptions"]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
