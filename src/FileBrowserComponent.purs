@@ -16,6 +16,7 @@ import Data.Typelevel.Num.Ops (class Add, class Mul)
 import Effect.Aff (Aff)
 import GalleryComponent as Gallery
 import Grid as Grid
+import Image (PalettizedImage)
 import Image as Image
 import Node.FS.Aff as FS
 import Node.FS.Stats as Stats
@@ -32,13 +33,16 @@ data BrowserState = BrowserState (ZA.ZipperArray (Grid.Grid Item))
 
 type CellWidth = (D2 :* D0) :* D0
 
-type CellHeight = (D1 :* D1) :* D2
+type CellHeight = (D1 :* D0) :* D5 
 
 cellWidth :: Proxy CellWidth
 cellWidth =Proxy
 
 cellHeight :: Proxy CellHeight
 cellHeight = Proxy
+
+header :: Image.Sized Image.ScreenWidth (D2 :* D8) PalettizedImage
+header = Image.loadSizedPalettizedImage Proxy Proxy "assets/header.png"
 
 fileImage :: File -> Image.Sized CellWidth CellHeight Image.PalettizedImage
 fileImage (File Folder _) = Image.loadSizedPalettizedImage Proxy Proxy "assets/folder.png"
@@ -134,7 +138,7 @@ fileBrowserComponent dir = do
     state <- InBrowser dir <$> makeBrowserState dir 
     let render st = 
           case st of
-            (Just (InBrowser _ (BrowserState s))) -> joinImageGrid $ itemImage <$> (ZA.current s)
+            (Just (InBrowser _ (BrowserState s))) -> Image.concatV header $ joinImageGrid $ itemImage <$> (ZA.current s)
             (Just (InGallery _ c)) -> embedComponentRender c
             (Just (InDirectory _ c)) -> embedComponentRender c
             Nothing -> Image.loadSizedPalettizedImage Proxy Proxy "assets/inconsistency.png"
