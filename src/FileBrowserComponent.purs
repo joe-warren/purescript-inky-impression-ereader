@@ -1,26 +1,26 @@
 module FileBrowserComponent
   where
 
+import Component
+import Data.Tuple
+import Data.Typelevel.Num.Reps
+import Data.Typelevel.Num.Sets
 import Prelude
-import Component 
-import ZipperArray as ZA
 
+import Buttons as Buttons
+import Data.Array as Array
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String as String
+import Data.Traversable (traverse)
+import Data.Typelevel.Num.Ops (class Add, class Mul)
 import Effect.Aff (Aff)
+import GalleryComponent as Gallery
+import Grid as Grid
+import Image as Image
 import Node.FS.Aff as FS
 import Node.FS.Stats as Stats
-import Grid as Grid
-import Data.Array as Array
-import Data.String as String
-import Data.Maybe (Maybe (..), fromMaybe)
-import Data.Traversable (traverse)
-import Type.Proxy (Proxy (..))
-import Data.Tuple 
-
-import  Data.Typelevel.Num.Sets 
-import  Data.Typelevel.Num.Reps
-import  Data.Typelevel.Num.Ops (class Add, class Mul)
-import Image as Image
-import Buttons as Buttons
+import Type.Proxy (Proxy(..))
+import ZipperArray as ZA
 
 data FileType = Folder | Image | Unknown
 data File = File FileType String
@@ -105,23 +105,31 @@ makeBrowserState dir = do
 
 data FileBrowserState = InBrowser String BrowserState 
     | InDirectory String FileBrowserState
-    | InGallery String (ZA.ZipperArray String)
+    | InGallery String (EReaderComponent (Maybe Gallery.GalleryState))
 
-update :: Tuple Buttons.ButtonId Buttons.PressType -> Maybe BrowserState -> Aff (Maybe BrowserState)
+update :: Tuple Buttons.ButtonId Buttons.PressType -> Maybe FileBrowserState -> Aff (Maybe FileBrowserState)
 update _ Nothing = pure Nothing
-update p (Just (BrowserState z)) =
-   pure <<< Just $ case indexGrid p (ZA.current z) of
-                PrevItem -> BrowserState $ fromMaybe (ZA.goLast z) $ ZA.goPrev z
-                NextItem -> BrowserState $ fromMaybe (ZA.goFirst z) $ ZA.goNext z
-                _ -> BrowserState z
+update p (Just (InBrowser dir (BrowserState z))) =
+    case indexGrid p (ZA.current z) of
+                PrevItem -> pure <<< Just <<< InBrowser dir <<< BrowserState $ fromMaybe (ZA.goLast z) $ ZA.goPrev z
+                NextItem -> pure <<< Just <<< InBrowser dir <<< BrowserState $ fromMaybe (ZA.goFirst z) $ ZA.goNext z
+                FileItem (File Image file) -> Just <<< InGallery dir <<< doubleTapEscapeableComponent <$> Gallery.galleryComponent dir file
+                _ -> pure <<< Just <<< InBrowser dir $ BrowserState z
+update p (Just (InGallery dir component )) = do
+    newC <- embedComponentUpdate component p
+    case newC.initialState of 
+        Just _ -> pure <<< Just <<< InGallery dir $ newC
+        Nothing -> Just <<< InBrowser dir <$> makeBrowserState dir 
+update p (Just (InDirectory dir component )) = pure <<< Just $ InDirectory dir component
 
-
-fileBrowserComponent :: String -> Aff (EReaderComponent (Maybe BrowserState))
+fileBrowserComponent :: String -> Aff (EReaderComponent (Maybe FileBrowserState))
 fileBrowserComponent dir = do
-    state <- makeBrowserState dir 
+    state <- InBrowser dir <$> makeBrowserState dir 
     let render st = 
           case st of
-            (Just (BrowserState s)) -> joinImageGrid $ itemImage <$> (ZA.current s)
+            (Just (InBrowser _ (BrowserState s))) -> joinImageGrid $ itemImage <$> (ZA.current s)
+            (Just (InGallery _ c)) -> embedComponentRender c
+            (Just (InDirectory _ _)) -> Image.loadSizedPalettizedImage Proxy Proxy "assets/inconsistency.png"
             Nothing -> Image.loadSizedPalettizedImage Proxy Proxy "assets/inconsistency.png"
     
     pure $ {

@@ -97,7 +97,6 @@ checkSize w h img = Sized <<< PalettizedImage $ do
 loadSizedPalettizedImage :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> String -> Sized w h PalettizedImage
 loadSizedPalettizedImage w h path = checkSize w h (loadPalettizedImage path)
 
-
 loadSizedArbitraryImage :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> String -> Sized w h PalettizedImage
 loadSizedArbitraryImage w h path = Sized <<< PalettizedImage <<< ExceptT <<< Promise.toAffE $ openAndResizeArbitraryImage (toNumber $ toInt' w) (toNumber $ toInt' h) Left Right path
 

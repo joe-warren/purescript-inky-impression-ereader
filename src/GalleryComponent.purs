@@ -1,24 +1,27 @@
 module GalleryComponent where
 
+import Component
 import Prelude
 
 import Buttons as Buttons
-import Image as Image
-import Component
-import Node.FS.Aff as FS
-import ZipperArray as ZA
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import Data.Maybe (Maybe (..), fromMaybe, maybe)
 import Effect.Exception (throw)
-import Data.Tuple (Tuple (..))
+import Image as Image
+import Node.FS.Aff as FS
+import ZipperArray as ZA
 
-galleryComponent :: String -> Aff (EReaderComponent (ZA.ZipperArray String))
-galleryComponent dir = do
+type GalleryState = ZA.ZipperArray String
+
+galleryComponent :: String -> String -> Aff (EReaderComponent (GalleryState))
+galleryComponent dir file = do
     files <- FS.readdir dir
     let files' = ((dir <> "/") <> _) <$> files 
     let noFiles = liftEffect $ throw ("empty directory: " <> dir) 
-    state <- maybe noFiles pure (ZA.fromArray files')
+    stateAtStart <- maybe noFiles pure (ZA.fromArray files')
+    let state = fromMaybe stateAtStart $ ZA.focusWith (_ == file) stateAtStart
     let update (Tuple buttonId press) st = pure $ case press of 
             Buttons.ShortTap -> case buttonId of 
                 Buttons.Button1 -> fromMaybe st $ ZA.goPrev st
