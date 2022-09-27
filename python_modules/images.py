@@ -25,14 +25,19 @@ def openPalettized(path):
 
 def openAndResizeArbitrary(w, h, path):
     try:
-        img = Image.open(path).resize([w, h]).convert('RGB')
+        orig = Image.open(path)
+        wF, hF = orig.size
+        desiredSize = [int(w), int(w*hF/wF)]
+        if desiredSize[1] > h:
+            desiredSize = [int(wF*h/hF), int(h)]
 
-        pImg = Image.new('P', [w, h])
-        pImg.putpalette(palette + [0, 0, 0]*(256-8))
-        pImg.paste(img, (0, 0))
+        img = orig.resize(desiredSize).convert('RGB')
+
+        pImg = Image.new('RGB', [w, h], color=(255,255,255))
+        pImg.paste(img, (int((w-desiredSize[0])/2), int((h-desiredSize[1])/2)))
         palimage = Image.new('P', (16, 16))
         palimage.putpalette(palette + [0, 0, 0]*(256-8))
-        newimage = img.quantize(palette=palimage)
+        newimage = pImg.quantize(palette=palimage)
         return newimage
     except FileNotFoundError as e:
         return f"couldn't find ${path} (got ${e})"
