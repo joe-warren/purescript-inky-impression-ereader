@@ -36,6 +36,7 @@ to generate this file without the comments in this block.
      "naturals",
      "node-fs-aff",
      "node-fs",
+     "node-path",
      "strings",
      "exceptions"]
 , packages = ./packages.dhall

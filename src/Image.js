@@ -82,3 +82,17 @@ exports.concatVRaw = function (a){
         }
     }
 }
+
+
+exports.renderTextRaw = function(w){
+    return function(h){
+        return function (text){
+            async function go(){
+                let images = await python("./python_modules/images.py")
+                let img = await images.renderText(w, h, text)
+                return img
+            }
+            return go
+        }
+    }
+}

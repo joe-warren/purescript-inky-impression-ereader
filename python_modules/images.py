@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 palette = [
     0, 0, 0,
@@ -45,3 +45,11 @@ def openAndResizeArbitrary(w, h, path):
 def size(img):
     (w, h) = img.size
     return [w, h]
+
+def renderText(w, h, text):
+    img = Image.new('P', (w, h), color=1)
+    img.putpalette(palette + [0, 0, 0]*(256-8))
+    font = ImageFont.truetype("assets/SourceSansPro-Regular.ttf", 12)
+    d_usr = ImageDraw.Draw(img)
+    d_usr.text((int(w/2),int(h/2)), text ,0, font=font, anchor="mm")
+    return img

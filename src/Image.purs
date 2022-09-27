@@ -12,6 +12,7 @@ module Image
   , loadPalettizedImage
   , loadSizedArbitraryImage
   , loadSizedPalettizedImage
+  , renderText
   , runPalettizedImage
   , screenHeight
   , screenHeightHalf
@@ -20,25 +21,25 @@ module Image
   )
   where
 
+import Data.Typelevel.Num.Reps
+import Data.Typelevel.Num.Sets
 import Prelude
 
-import Foreign (Foreign)
-import Control.Promise as Promise
-
-import Effect (Effect)
-import Effect.Class (liftEffect)
-import Effect.Aff (Aff)
-import Data.Either (Either(..))
 import Control.Monad ((=<<))
-import  Data.Typelevel.Num.Sets 
-import  Data.Typelevel.Num.Reps
-import  Data.Typelevel.Num.Ops (class Add)
-import Type.Proxy (Proxy (..))
-import Data.Int (round, toNumber)
-import Data.Array as Array
-import Data.Tuple (Tuple (..))
-import Data.Maybe (Maybe (..))
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT, throwError, lift)
+import Control.Promise as Promise
+import Data.Array as Array
+import Data.Either (Either(..))
+import Data.Int (round, toNumber)
+import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
+import Data.Typelevel.Num.Ops (class Add)
+import Effect (Effect)
+import Effect.Aff (Aff)
+import Effect.Class (liftEffect)
+import Foreign (Foreign)
+import Type.Proxy (Proxy(..))
+
 newtype PalettizedImage = PalettizedImage (ExceptT String Aff Foreign)
 
 runPalettizedToExcept :: PalettizedImage -> ExceptT String Aff Foreign
@@ -79,6 +80,8 @@ foreign import concatVRaw :: Foreign -> Foreign -> Effect (Promise.Promise (Fore
 
 foreign import openAndResizeArbitraryImage :: Number -> Number -> (String -> Either String Foreign) -> (Foreign -> Either String Foreign) -> String -> Effect (Promise.Promise (Either String Foreign))
 
+foreign import renderTextRaw :: Number -> Number -> String -> Effect (Promise.Promise Foreign)
+
 loadPalettizedImage :: String -> PalettizedImage
 loadPalettizedImage filename = PalettizedImage <<< ExceptT $ Promise.toAffE (openPalettized (Left) (Right) filename)
 
@@ -103,9 +106,13 @@ loadSizedArbitraryImage w h path = Sized <<< PalettizedImage <<< ExceptT <<< Pro
 loadArbitraryFullscreenImage :: String -> Sized ScreenWidth ScreenHeight PalettizedImage
 loadArbitraryFullscreenImage = loadSizedArbitraryImage screenWidth screenHeight
 
+renderText :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> String -> Sized w h PalettizedImage
+renderText w h text = Sized <<< PalettizedImage <<< lift $ Promise.toAffE $ renderTextRaw (toNumber $ toInt' w) (toNumber $ toInt' h) text
+
 concatH :: forall w1 w2 wTot h. Pos w1 => Pos w2 => Pos h => Add w1 w2 wTot => Sized w1 h PalettizedImage -> Sized w2 h PalettizedImage -> Sized wTot h PalettizedImage
 concatH (Sized a) (Sized b) = Sized <<< PalettizedImage $ do
-    rawA <- runPalettizedToExcept a 
+    rawA <- runPalettizedToExcept a
+ 
     rawB <- runPalettizedToExcept b
     lift $ Promise.toAffE (concatHRaw rawA rawB) 
 

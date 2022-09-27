@@ -19,6 +19,7 @@ import Grid as Grid
 import Image (PalettizedImage)
 import Image as Image
 import Node.FS.Aff as FS
+import Node.Path as Path
 import Node.FS.Stats as Stats
 import Type.Proxy (Proxy(..))
 import ZipperArray as ZA
@@ -35,6 +36,11 @@ type CellWidth = (D2 :* D0) :* D0
 
 type CellHeight = (D1 :* D0) :* D5 
 
+type CellHeightWOText = (D9 :* D0)
+
+type TextHeight = D1 :* D5
+
+
 cellWidth :: Proxy CellWidth
 cellWidth =Proxy
 
@@ -45,8 +51,12 @@ header :: Image.Sized Image.ScreenWidth (D2 :* D8) PalettizedImage
 header = Image.loadSizedPalettizedImage Proxy Proxy "assets/header.png"
 
 fileImage :: File -> Image.Sized CellWidth CellHeight Image.PalettizedImage
-fileImage (File Folder _) = Image.loadSizedPalettizedImage Proxy Proxy "assets/folder.png"
-fileImage (File Unknown _) = Image.loadSizedPalettizedImage Proxy Proxy "assets/unknown.png"
+fileImage (File Folder name) = Image.loadSizedPalettizedImage Proxy (Proxy :: Proxy CellHeightWOText) "assets/folder.png" 
+                                    `Image.concatV`
+                                    Image.renderText Proxy (Proxy :: Proxy TextHeight) (Path.basename name)
+fileImage (File Unknown name) = Image.loadSizedPalettizedImage Proxy (Proxy :: Proxy CellHeightWOText) "assets/unknown.png"
+                                    `Image.concatV`
+                                    Image.renderText Proxy (Proxy :: Proxy TextHeight) (Path.basename name)
 fileImage (File Image path) = Image.loadSizedArbitraryImage Proxy Proxy path
 
 itemImage :: Item -> Image.Sized CellWidth CellHeight Image.PalettizedImage
