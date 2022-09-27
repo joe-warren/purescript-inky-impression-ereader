@@ -96,3 +96,12 @@ exports.renderTextRaw = function(w){
         }
     }
 }
+
+
+exports.rotateImageRaw = function(img){
+    async function go(){
+        // 4 = PIL.Image.Transpose.ROTATE_270
+        return await img.transpose(4)
+    }
+    return go
+}

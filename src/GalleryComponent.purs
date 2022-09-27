@@ -17,8 +17,11 @@ import Image as Image
 import Node.FS.Aff as FS
 import Node.FS.Stats as Stats
 import ZipperArray as ZA
+import Type.Proxy (Proxy (..))
 
-type GalleryState = ZA.ZipperArray String
+data Rotation = NoRotation | ClockwiseRotation
+
+data GalleryState = GalleryState Rotation (ZA.ZipperArray String)
 
 imageFiles :: Array Pattern
 imageFiles = Pattern <$> [".png", ".gif", ".jpg"]
@@ -30,22 +33,28 @@ isImage path = do
         then false
         else any (isJust <<< (_ `String.stripSuffix` (String.toLower path))) imageFiles
 
+changeRotationState :: Rotation -> Rotation
+changeRotationState NoRotation = ClockwiseRotation
+changeRotationState ClockwiseRotation = NoRotation
+
 galleryComponent :: String -> String -> Aff (EReaderComponent (GalleryState))
 galleryComponent dir file = do
     files <- (Array.filterA isImage <<< (map ((dir <> "/") <> _))) =<< FS.readdir dir
     let noFiles = liftEffect $ throw ("empty directory: " <> dir) 
     stateAtStart <- maybe noFiles pure (ZA.fromArray files)
     let state = fromMaybe stateAtStart $ ZA.focusWith (_ == file) stateAtStart
-    let update (Tuple buttonId press) st = pure $ case press of 
+    let update (Tuple buttonId press) g@(GalleryState r st) = pure $ case press of 
             Buttons.ShortTap -> case buttonId of 
-                Buttons.Button1 -> fromMaybe (ZA.goLast st) $ ZA.goPrev st
-                Buttons.Button4 -> fromMaybe (ZA.goFirst st) $ ZA.goNext st
-                _ -> st
-            _ -> st
-    let render st = Image.loadArbitraryFullscreenImage (ZA.current st)
-
+                Buttons.Button1 -> GalleryState r $ fromMaybe (ZA.goLast st) $ ZA.goPrev st
+                Buttons.Button2 -> GalleryState (changeRotationState r) st
+                Buttons.Button4 -> GalleryState r $ fromMaybe (ZA.goFirst st) $ ZA.goNext st
+                _ -> g
+            _ -> g
+    let render (GalleryState r st) = case r of
+            NoRotation -> Image.loadArbitraryFullscreenImage (ZA.current st)
+            ClockwiseRotation -> Image.rotate $ Image.loadSizedArbitraryImage Proxy Proxy (ZA.current st)
     pure $ {
-        initialState: state,
+        initialState: GalleryState NoRotation state,
         updateComponent: update,
         renderComponent: render    
     }

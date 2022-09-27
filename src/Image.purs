@@ -6,8 +6,8 @@ module Image
   , ScreenWidth
   , Sized(..)
   , concatH
-  , concatHRaw
   , concatV
+  , rotate
   , loadArbitraryFullscreenImage
   , loadPalettizedImage
   , loadSizedArbitraryImage
@@ -82,6 +82,8 @@ foreign import openAndResizeArbitraryImage :: Number -> Number -> (String -> Eit
 
 foreign import renderTextRaw :: Number -> Number -> String -> Effect (Promise.Promise Foreign)
 
+foreign import rotateImageRaw :: Foreign -> Effect (Promise.Promise Foreign)
+
 loadPalettizedImage :: String -> PalettizedImage
 loadPalettizedImage filename = PalettizedImage <<< ExceptT $ Promise.toAffE (openPalettized (Left) (Right) filename)
 
@@ -120,4 +122,9 @@ concatV :: forall w h1 h2 hTot. Pos w => Pos h1 => Pos h2 => Add h1 h2 hTot => S
 concatV (Sized a) (Sized b) = Sized <<< PalettizedImage $ do 
     rawA <- runPalettizedToExcept a 
     rawB <- runPalettizedToExcept b
-    lift $ Promise.toAffE (concatVRaw rawA rawB) 
+    lift $ Promise.toAffE (concatVRaw rawA rawB)
+
+rotate :: forall w h. Pos w => Pos h => Sized w h PalettizedImage -> Sized h w PalettizedImage
+rotate (Sized img) = Sized <<< PalettizedImage $ do
+    raw <- runPalettizedToExcept img
+    lift $ Promise.toAffE (rotateImageRaw raw)
