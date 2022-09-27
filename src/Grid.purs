@@ -7,7 +7,9 @@ import Data.Foldable
 
 import Data.Semigroup.Traversable
 import Data.Traversable
-
+import Control.Monad.State (evalState, get, modify)
+import Data.Array as Array
+import Data.Maybe (Maybe (..))
 
 data Horizontal a = Horizontal a a a
 
@@ -75,4 +77,30 @@ instance Traversable1 Grid where
 instance Traversable Grid where
     traverse = traverse1
     sequence f = sequenceDefault f
+
+instance Apply Horizontal where 
+    apply (Horizontal fx fy fz) (Horizontal x y z) = Horizontal (fx x) (fy y) (fz z)
+
+
+instance Apply Vertical where 
+    apply (Vertical fw fx fy fz) (Vertical w x y z) = Vertical (fw w) (fx x) (fy y) (fz z)
+
+instance Apply Grid where
+    apply (Grid fh) (Grid h) =Grid ((<*>) <$> fh <*> h)
+
+instance Applicative Horizontal where
+    pure x = Horizontal x x x
+
+    
+instance Applicative Vertical where
+    pure x = Vertical x x x x
+
+instance Applicative Grid where
+    pure = Grid <<< pure <<< pure
+
+cellNumbers :: Grid Int
+cellNumbers = evalState (traverse (const (get <* modify (_ + 1))) (pure unit)) 0
+
+fromArray :: forall a. Array a -> Grid (Maybe a)
+fromArray a = Array.index a <$> cellNumbers
 
