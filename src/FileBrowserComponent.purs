@@ -104,7 +104,7 @@ makeBrowserState dir = do
 
 
 data FileBrowserState = InBrowser String BrowserState 
-    | InDirectory String FileBrowserState
+    | InDirectory String (EReaderComponent (Maybe FileBrowserState))
     | InGallery String (EReaderComponent (Maybe Gallery.GalleryState))
 
 update :: Tuple Buttons.ButtonId Buttons.PressType -> Maybe FileBrowserState -> Aff (Maybe FileBrowserState)
@@ -113,14 +113,20 @@ update p (Just (InBrowser dir (BrowserState z))) =
     case indexGrid p (ZA.current z) of
                 PrevItem -> pure <<< Just <<< InBrowser dir <<< BrowserState $ fromMaybe (ZA.goLast z) $ ZA.goPrev z
                 NextItem -> pure <<< Just <<< InBrowser dir <<< BrowserState $ fromMaybe (ZA.goFirst z) $ ZA.goNext z
+                UpItem -> pure $ Nothing
                 FileItem (File Image file) -> Just <<< InGallery dir <<< doubleTapEscapeableComponent <$> Gallery.galleryComponent dir file
+                FileItem (File Folder file) -> Just <<< InDirectory dir <$> fileBrowserComponent file
                 _ -> pure <<< Just <<< InBrowser dir $ BrowserState z
 update p (Just (InGallery dir component )) = do
     newC <- embedComponentUpdate component p
     case newC.initialState of 
         Just _ -> pure <<< Just <<< InGallery dir $ newC
         Nothing -> Just <<< InBrowser dir <$> makeBrowserState dir 
-update p (Just (InDirectory dir component )) = pure <<< Just $ InDirectory dir component
+update p (Just (InDirectory dir component )) = do
+    newC <- embedComponentUpdate component p
+    case newC.initialState of 
+        Just _ -> pure <<< Just <<< InDirectory dir $ newC
+        Nothing -> Just <<< InBrowser dir <$> makeBrowserState dir 
 
 fileBrowserComponent :: String -> Aff (EReaderComponent (Maybe FileBrowserState))
 fileBrowserComponent dir = do
@@ -129,7 +135,7 @@ fileBrowserComponent dir = do
           case st of
             (Just (InBrowser _ (BrowserState s))) -> joinImageGrid $ itemImage <$> (ZA.current s)
             (Just (InGallery _ c)) -> embedComponentRender c
-            (Just (InDirectory _ _)) -> Image.loadSizedPalettizedImage Proxy Proxy "assets/inconsistency.png"
+            (Just (InDirectory _ c)) -> embedComponentRender c
             Nothing -> Image.loadSizedPalettizedImage Proxy Proxy "assets/inconsistency.png"
     
     pure $ {
