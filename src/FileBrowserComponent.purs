@@ -119,29 +119,29 @@ makeBrowserState dir = do
 
 
 data FileBrowserState = InBrowser String BrowserState 
-    | InDirectory String (EReaderComponent (Maybe FileBrowserState))
-    | InGallery String (EReaderComponent (Maybe Gallery.GalleryState))
+    | InDirectory FileBrowserState (EReaderComponent (Maybe FileBrowserState))
+    | InGallery FileBrowserState (EReaderComponent (Maybe Gallery.GalleryState))
 
 update :: Tuple Buttons.ButtonId Buttons.PressType -> Maybe FileBrowserState -> Aff (Maybe FileBrowserState)
 update _ Nothing = pure Nothing
-update p (Just (InBrowser dir (BrowserState z))) =
+update p (Just st@(InBrowser dir (BrowserState z))) =
     case indexGrid p (ZA.current z) of
                 PrevItem -> pure <<< Just <<< InBrowser dir <<< BrowserState $ fromMaybe (ZA.goLast z) $ ZA.goPrev z
                 NextItem -> pure <<< Just <<< InBrowser dir <<< BrowserState $ fromMaybe (ZA.goFirst z) $ ZA.goNext z
                 UpItem -> pure $ Nothing
-                FileItem (File Image file) -> Just <<< InGallery dir <<< doubleTapEscapeableComponent <$> Gallery.galleryComponent dir file
-                FileItem (File Folder file) -> Just <<< InDirectory dir <$> fileBrowserComponent file
+                FileItem (File Image file) -> Just <<< InGallery st <<< doubleTapEscapeableComponent <$> Gallery.galleryComponent dir file
+                FileItem (File Folder file) -> Just <<< InDirectory st <$> fileBrowserComponent file
                 _ -> pure <<< Just <<< InBrowser dir $ BrowserState z
 update p (Just (InGallery dir component )) = do
     newC <- embedComponentUpdate component p
     case newC.initialState of 
         Just _ -> pure <<< Just <<< InGallery dir $ newC
-        Nothing -> Just <<< InBrowser dir <$> makeBrowserState dir 
+        Nothing -> pure <<< Just $ dir
 update p (Just (InDirectory dir component )) = do
     newC <- embedComponentUpdate component p
     case newC.initialState of 
         Just _ -> pure <<< Just <<< InDirectory dir $ newC
-        Nothing -> Just <<< InBrowser dir <$> makeBrowserState dir 
+        Nothing -> pure <<< Just $ dir
 
 fileBrowserComponent :: String -> Aff (EReaderComponent (Maybe FileBrowserState))
 fileBrowserComponent dir = do
