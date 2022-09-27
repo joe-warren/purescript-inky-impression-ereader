@@ -77,9 +77,10 @@ indexGrid (Tuple button press) (Grid.Grid v) = indexHorizontal press $ indexVert
 mkFile :: String -> Aff File
 mkFile path = do
     s <- FS.stat path
+    isImage <- Gallery.isImage path
     pure $ if Stats.isDirectory s 
-        then (File Folder path)
-        else if String.contains (String.Pattern ".png") path
+        then  (File Folder path)
+        else if isImage
             then (File Image path)
             else (File Unknown path)
 
