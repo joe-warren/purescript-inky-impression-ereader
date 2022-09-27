@@ -10,6 +10,7 @@ module Image
   , concatV
   , loadArbitraryFullscreenImage
   , loadPalettizedImage
+  , loadSizedArbitraryImage
   , loadSizedPalettizedImage
   , runPalettizedImage
   , screenHeight

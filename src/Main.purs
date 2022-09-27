@@ -21,6 +21,7 @@ import Streams as SR
 import Streams ((>->))
 import Component as Component
 import GalleryComponent as GalleryComponent
+import FileBrowserComponent as FileBrowserComponent
 
 displayPipeline :: Buttons.Mode -> SR.Stream (Image.FullscreenImage) (Unit) Aff Unit
 displayPipeline Buttons.RPiMode = SR.sApp (RPiDisplay.display) 
@@ -42,6 +43,7 @@ main =
               log "📖"
 
               launchAff_ $ do 
-                 component <- GalleryComponent.galleryComponent "photos"
+                 --component <- GalleryComponent.galleryComponent "photos"
+                 component <- FileBrowserComponent.fileBrowserComponent "photos"
                  let stream = Buttons.buttonPipeline mode >-> Component.componentToStream component >-> displayPipeline mode >-> SR.drain
                  (SR.runStream stream)
