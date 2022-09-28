@@ -98,6 +98,20 @@ exports.renderTextRaw = function(w){
 }
 
 
+exports.blankImageRaw = function(w){
+    return function(h){
+        return function (v){
+            async function go(){
+                let images = await python("./python_modules/images.py")
+                let img = await images.blankImage(w, h, v)
+                return img
+            }
+            return go
+        }
+    }
+}
+
+
 exports.rotateImageRaw = function(img){
     async function go(){
         // 4 = PIL.Image.Transpose.ROTATE_270
@@ -105,3 +119,4 @@ exports.rotateImageRaw = function(img){
     }
     return go
 }
+

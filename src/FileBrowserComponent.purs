@@ -16,11 +16,11 @@ import Data.Typelevel.Num.Ops (class Add, class Mul)
 import Effect.Aff (Aff)
 import GalleryComponent as Gallery
 import Grid as Grid
-import Image (PalettizedImage)
+import Image (PalettizedImage, ScreenWidth)
 import Image as Image
 import Node.FS.Aff as FS
-import Node.Path as Path
 import Node.FS.Stats as Stats
+import Node.Path as Path
 import Type.Proxy (Proxy(..))
 import ZipperArray as ZA
 
@@ -32,11 +32,11 @@ data Item = FileItem File | PrevItem | NextItem | UpItem | EmptyItem
 data BrowserState = BrowserState (ZA.ZipperArray (Grid.Grid Item))
 
 
-type CellWidth = (D2 :* D0) :* D0
+type CellWidth = (D1 :* D9) :* D8
 
-type CellHeight = (D1 :* D0) :* D5 
+type CellHeight = (D1 :* D0) :* D2 
 
-type CellHeightWOText = (D9 :* D0)
+type CellHeightWOText = (D8 :* D7)
 
 type TextHeight = D1 :* D5
 
@@ -64,7 +64,7 @@ itemImage (FileItem file) = fileImage file
 itemImage PrevItem = Image.loadSizedPalettizedImage Proxy Proxy "assets/prev.png"
 itemImage NextItem = Image.loadSizedPalettizedImage Proxy Proxy "assets/next.png"
 itemImage UpItem = Image.loadSizedPalettizedImage Proxy Proxy "assets/up.png"
-itemImage EmptyItem = Image.loadSizedPalettizedImage Proxy Proxy "assets/empty.png"
+itemImage EmptyItem = Image.blank' Image.White--Image.loadSizedPalettizedImage Proxy Proxy "assets/empty.png"
 
 
 joinImageGrid :: forall t27 t28 t29 t30 t33 t46 t47. Pos t27 => Pos t28 => Pos t29 => Add t28 t29 t30 => Add t29 t28 t30 => Pos t33 => Pos t29 => Add t33 t29 t28 => Add t29 t33 t28 => Pos t29 => Pos t29 => Add t29 t29 t33 => Add t29 t29 t33 => Pos t46 => Pos t47 => Pos t29 => Add t46 t47 t27 => Add t47 t46 t27 => Pos t47 => Pos t47 => Pos t29 => Add t47 t47 t46 => Add t47 t47 t46 => Grid.Grid (Image.Sized t47 t29 Image.PalettizedImage) -> Image.Sized t27 t30 Image.PalettizedImage
@@ -73,6 +73,12 @@ joinImageGrid (Grid.Grid v) = let jh (Grid.Horizontal x y z) = x `Image.concatH`
                                   jv (Grid.Vertical w x y z) = w `Image.concatV` x `Image.concatV` y `Image.concatV` z
                                in jv $ jh <$> v
  
+
+joinImageGridBorder :: forall t38 t39 t40 t41 t44 t45 t49 t54 t59 t72 t73 t77 t78 t82. Pos t38 => Pos t39 => Pos t40 => Add t39 t40 t41 => Add t40 t39 t41 => Pos t44 => Pos t45 => Add t44 t45 t39 => Add t45 t44 t39 => Pos t49 => Pos t40 => Add t49 t40 t44 => Add t40 t49 t44 => Pos t54 => Pos t45 => Add t54 t45 t49 => Add t45 t54 t49 => Pos t59 => Pos t40 => Add t59 t40 t54 => Add t40 t59 t54 => Pos t40 => Pos t45 => Add t40 t45 t59 => Add t45 t40 t59 => Pos t72 => Pos t73 => Pos t40 => Add t72 t73 t38 => Add t73 t72 t38 => Pos t77 => Pos t78 => Pos t40 => Add t77 t78 t72 => Add t78 t77 t72 => Pos t82 => Pos t73 => Pos t40 => Add t82 t73 t77 => Add t73 t82 t77 => Pos t73 => Pos t78 => Pos t40 => Add t73 t78 t82 => Add t78 t73 t82 => Image.Sized t78 t40 PalettizedImage -> Image.Sized t38 t45 PalettizedImage -> Grid.Grid (Image.Sized t73 t40 PalettizedImage) -> Image.Sized t38 t41 PalettizedImage
+joinImageGridBorder hBorder vBorder (Grid.Grid v) = 
+    let jh (Grid.Horizontal x y z) = x `Image.concatH` hBorder `Image.concatH` y `Image.concatH` hBorder `Image.concatH` z
+        jv (Grid.Vertical w x y z) = w `Image.concatV` vBorder `Image.concatV` x `Image.concatV` vBorder `Image.concatV` y `Image.concatV` vBorder `Image.concatV` z
+     in jv $ jh <$> v
 
 indexVertical :: forall a. Buttons.ButtonId -> Grid.Vertical a -> a
 indexVertical Buttons.Button1 (Grid.Vertical a _ _ _) = a
@@ -148,7 +154,7 @@ fileBrowserComponent dir = do
     state <- InBrowser dir <$> makeBrowserState dir 
     let render st = 
           case st of
-            (Just (InBrowser _ (BrowserState s))) -> Image.concatV header $ joinImageGrid $ itemImage <$> (ZA.current s)
+            (Just (InBrowser _ (BrowserState s))) -> Image.concatV header $ joinImageGridBorder (Image.blank (Proxy :: Proxy D3) (Proxy :: Proxy CellHeight) Image.Black) (Image.blank (Proxy :: Proxy ScreenWidth) (Proxy :: Proxy D4)  Image.Black) $ itemImage <$> (ZA.current s)
             (Just (InGallery _ c)) -> embedComponentRender c
             (Just (InDirectory _ c)) -> embedComponentRender c
             Nothing -> Image.loadSizedPalettizedImage Proxy Proxy "assets/inconsistency.png"

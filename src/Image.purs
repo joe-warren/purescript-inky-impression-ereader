@@ -1,6 +1,7 @@
 module Image
   ( FullscreenImage
   , PalettizedImage(..)
+  , Colour(..)
   , ScreenHeight
   , ScreenHeightHalf
   , ScreenWidth
@@ -13,6 +14,8 @@ module Image
   , loadSizedArbitraryImage
   , loadSizedPalettizedImage
   , renderText
+  , blank
+  , blank'
   , runPalettizedImage
   , screenHeight
   , screenHeightHalf
@@ -84,6 +87,19 @@ foreign import renderTextRaw :: Number -> Number -> String -> Effect (Promise.Pr
 
 foreign import rotateImageRaw :: Foreign -> Effect (Promise.Promise Foreign)
 
+foreign import blankImageRaw :: Number -> Number -> Number -> Effect (Promise.Promise Foreign)
+
+data Colour = Black | White | Green | Blue | Red | Yellow | Orange 
+
+colourToNumber :: Colour -> Number
+colourToNumber Black = 0.0
+colourToNumber White = 1.0
+colourToNumber Green = 2.0
+colourToNumber Blue = 3.0
+colourToNumber Red = 4.0
+colourToNumber Yellow = 5.0
+colourToNumber Orange = 6.0
+
 loadPalettizedImage :: String -> PalettizedImage
 loadPalettizedImage filename = PalettizedImage <<< ExceptT $ Promise.toAffE (openPalettized (Left) (Right) filename)
 
@@ -128,3 +144,10 @@ rotate :: forall w h. Pos w => Pos h => Sized w h PalettizedImage -> Sized h w P
 rotate (Sized img) = Sized <<< PalettizedImage $ do
     raw <- runPalettizedToExcept img
     lift $ Promise.toAffE (rotateImageRaw raw)
+
+blank :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> Colour -> Sized w h PalettizedImage
+blank w h c = Sized <<< PalettizedImage <<< lift $ Promise.toAffE (blankImageRaw (toNumber (toInt' w)) (toNumber (toInt' h)) (colourToNumber c))
+
+
+blank' :: forall w h. Pos w => Pos h =>  Colour -> Sized h w PalettizedImage
+blank' c = blank Proxy Proxy c
