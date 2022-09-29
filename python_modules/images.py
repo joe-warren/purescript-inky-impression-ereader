@@ -53,3 +53,9 @@ def renderText(w, h, text):
     d_usr = ImageDraw.Draw(img)
     d_usr.text((int(w/2),int(h/2)), text ,0, font=font, anchor="mm")
     return img
+
+
+def blankImage(w, h, v):
+    img = Image.new('P', (w, h), color=int(v))
+    img.putpalette(palette + [0, 0, 0]*(256-8))
+    return img
