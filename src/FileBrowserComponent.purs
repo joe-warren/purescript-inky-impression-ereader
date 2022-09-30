@@ -14,6 +14,7 @@ import Data.String as String
 import Data.Traversable (traverse)
 import Data.Typelevel.Num.Ops (class Add, class Mul)
 import Effect.Aff (Aff)
+import GalleryComponent (isPdf)
 import GalleryComponent as Gallery
 import Grid as Grid
 import Image (PalettizedImage, ScreenWidth)
@@ -21,10 +22,11 @@ import Image as Image
 import Node.FS.Aff as FS
 import Node.FS.Stats as Stats
 import Node.Path as Path
+import Pdf as Pdf
 import Type.Proxy (Proxy(..))
 import ZipperArray as ZA
 
-data FileType = Folder | Image | Unknown
+data FileType = Folder | Image | Pdf | Unknown
 data File = File FileType String
 
 data Item = FileItem File | PrevItem | NextItem | UpItem | EmptyItem
@@ -57,14 +59,17 @@ fileImage (File Folder name) = Image.loadSizedPalettizedImage Proxy (Proxy :: Pr
 fileImage (File Unknown name) = Image.loadSizedPalettizedImage Proxy (Proxy :: Proxy CellHeightWOText) "assets/unknown.png"
                                     `Image.concatV`
                                     Image.renderText Proxy (Proxy :: Proxy TextHeight) (Path.basename name)
+fileImage (File Pdf name) = Image.loadSizedPalettizedImage Proxy (Proxy :: Proxy CellHeightWOText) "assets/pdf.png"
+                                    `Image.concatV`
+                                    Image.renderText Proxy (Proxy :: Proxy TextHeight) (Path.basename name)
 fileImage (File Image path) = Image.loadSizedArbitraryImage Proxy Proxy path
 
 itemImage :: Item -> Image.Sized CellWidth CellHeight Image.PalettizedImage
 itemImage (FileItem file) = fileImage file
-itemImage PrevItem = Image.loadSizedPalettizedImage Proxy Proxy "assets/prev.png"
-itemImage NextItem = Image.loadSizedPalettizedImage Proxy Proxy "assets/next.png"
-itemImage UpItem = Image.loadSizedPalettizedImage Proxy Proxy "assets/up.png"
-itemImage EmptyItem = Image.blank' Image.White--Image.loadSizedPalettizedImage Proxy Proxy "assets/empty.png"
+itemImage PrevItem = Image.loadSizedPalettizedImage' "assets/prev.png"
+itemImage NextItem = Image.loadSizedPalettizedImage' "assets/next.png"
+itemImage UpItem = Image.loadSizedPalettizedImage' "assets/up.png"
+itemImage EmptyItem = Image.blank' Image.White
 
 
 joinImageGrid :: forall t27 t28 t29 t30 t33 t46 t47. Pos t27 => Pos t28 => Pos t29 => Add t28 t29 t30 => Add t29 t28 t30 => Pos t33 => Pos t29 => Add t33 t29 t28 => Add t29 t33 t28 => Pos t29 => Pos t29 => Add t29 t29 t33 => Add t29 t29 t33 => Pos t46 => Pos t47 => Pos t29 => Add t46 t47 t27 => Add t47 t46 t27 => Pos t47 => Pos t47 => Pos t29 => Add t47 t47 t46 => Add t47 t47 t46 => Grid.Grid (Image.Sized t47 t29 Image.PalettizedImage) -> Image.Sized t27 t30 Image.PalettizedImage
@@ -98,11 +103,15 @@ mkFile :: String -> Aff File
 mkFile path = do
     s <- FS.stat path
     isImage <- Gallery.isImage path
-    pure $ if Stats.isDirectory s 
-        then  (File Folder path)
+    isPdf <- Gallery.isPdf path
+    let t = if Stats.isDirectory s 
+        then  Folder
         else if isImage
-            then (File Image path)
-            else (File Unknown path)
+            then Image
+            else if isPdf
+                then Pdf
+                else Unknown
+    pure $ File t path
 
 
 chunk :: forall a. Int -> Array a -> Array (Array a)
@@ -137,6 +146,9 @@ update p (Just st@(InBrowser dir (BrowserState z))) =
                 UpItem -> pure $ Nothing
                 FileItem (File Image file) -> Just <<< InGallery st <<< doubleTapEscapeableComponent <$> Gallery.galleryComponent dir file
                 FileItem (File Folder file) -> Just <<< InDirectory st <$> fileBrowserComponent file
+                FileItem (File Pdf file) -> do
+                     extractedDir <- Pdf.extractPdf file
+                     Just <<< InGallery st <<< doubleTapEscapeableComponent <$> Gallery.galleryComponent extractedDir ""
                 _ -> pure <<< Just <<< InBrowser dir $ BrowserState z
 update p (Just (InGallery dir component )) = do
     newC <- embedComponentUpdate component p

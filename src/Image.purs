@@ -13,6 +13,7 @@ module Image
   , loadPalettizedImage
   , loadSizedArbitraryImage
   , loadSizedPalettizedImage
+  , loadSizedPalettizedImage'
   , renderText
   , blank
   , blank'
@@ -24,11 +25,10 @@ module Image
   )
   where
 
-import Data.Typelevel.Num.Reps
-import Data.Typelevel.Num.Sets
+import Data.Typelevel.Num.Reps (type (:*), D0, D2, D3, D4, D6, D8)
+import Data.Typelevel.Num.Sets (class Pos, toInt')
 import Prelude
 
-import Control.Monad ((=<<))
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT, throwError, lift)
 import Control.Promise as Promise
 import Data.Array as Array
@@ -39,7 +39,6 @@ import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num.Ops (class Add)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Class (liftEffect)
 import Foreign (Foreign)
 import Type.Proxy (Proxy(..))
 
@@ -51,6 +50,7 @@ runPalettizedToExcept (PalettizedImage p) = p
 runPalettizedImage :: PalettizedImage -> Aff (Either String Foreign)
 runPalettizedImage = runExceptT <<< runPalettizedToExcept
 
+newtype Sized :: forall k1 k2. k1 -> k2 -> Type -> Type
 newtype Sized w h a = Sized a
 
 type ScreenWidth = (D6 :* D0) :* D0
@@ -117,6 +117,10 @@ checkSize w h img = Sized <<< PalettizedImage $ do
 
 loadSizedPalettizedImage :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> String -> Sized w h PalettizedImage
 loadSizedPalettizedImage w h path = checkSize w h (loadPalettizedImage path)
+
+
+loadSizedPalettizedImage' :: forall w h. Pos w => Pos h =>  String -> Sized w h PalettizedImage
+loadSizedPalettizedImage' = loadSizedPalettizedImage Proxy Proxy
 
 loadSizedArbitraryImage :: forall w h. Pos w => Pos h => Proxy w -> Proxy h -> String -> Sized w h PalettizedImage
 loadSizedArbitraryImage w h path = Sized <<< PalettizedImage <<< ExceptT <<< Promise.toAffE $ openAndResizeArbitraryImage (toNumber $ toInt' w) (toNumber $ toInt' h) Left Right path

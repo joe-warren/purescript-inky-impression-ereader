@@ -16,22 +16,26 @@ import Effect.Exception (throw)
 import Image as Image
 import Node.FS.Aff as FS
 import Node.FS.Stats as Stats
+import Type.Proxy (Proxy(..))
 import ZipperArray as ZA
-import Type.Proxy (Proxy (..))
 
 data Rotation = NoRotation | ClockwiseRotation
 
 data GalleryState = GalleryState Rotation (ZA.ZipperArray String)
 
-imageFiles :: Array Pattern
-imageFiles = Pattern <$> [".png", ".gif", ".jpg"]
-
-isImage :: String -> Aff Boolean
-isImage path = do 
+hasExtension :: Array String -> String -> Aff Boolean
+hasExtension exts path = do
     s <- FS.stat path
+    let patterns = Pattern <<< ("." <> _) <<< String.toLower <$> exts
     pure $ if Stats.isDirectory s 
         then false
-        else any (isJust <<< (_ `String.stripSuffix` (String.toLower path))) imageFiles
+        else any (isJust <<< (_ `String.stripSuffix` (String.toLower path))) patterns
+
+isImage :: String -> Aff Boolean
+isImage  = hasExtension ["png", "gif", "jpg"]
+
+isPdf :: String -> Aff Boolean
+isPdf = hasExtension ["pdf"]
 
 changeRotationState :: Rotation -> Rotation
 changeRotationState NoRotation = ClockwiseRotation

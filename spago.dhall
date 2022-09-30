@@ -38,7 +38,9 @@ to generate this file without the comments in this block.
      "node-fs",
      "node-path",
      "strings",
-     "exceptions"]
+     "exceptions",
+     "node-child-process",
+     "uuid"]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
